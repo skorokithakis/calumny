@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Calendar Day View Clone</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: white;
+        margin: 0;
+        padding: 0;
+      }
+      .calendar-container {
+        display: grid;
+        grid-template-columns: 50px 1fr;
+        height: calc(100vh - 56px); /* Subtract header height */
+        overflow-y: hidden; /* Prevent scrolling */
+        margin-top: 56px; /* Add margin to account for fixed header */
+      }
+      .time-column {
+        border-right: 1px solid #e0e0e0;
+        padding-right: 8px;
+        display: flex;
+        flex-direction: column;
+      }
+      .time-slot {
+        flex: 1;
+        text-align: right;
+        color: black;
+        font-weight: bold;
+        font-size: 10px;
+        position: relative;
+      }
+      .time-slot span {
+        position: absolute;
+        top: -6px;
+        right: 8px;
+      }
+      .events-column {
+        position: relative;
+        height: 100%;
+        overflow-y: hidden;
+      }
+      .event {
+        position: absolute;
+        left: 1px;
+        right: 1px;
+        padding: 3px;
+        border-radius: 4px;
+        font-size: 12px;
+        overflow: hidden;
+        background-color: #fff;
+        border: 1px solid #000;
+      }
+      .event-title {
+        font-weight: bold;
+      }
+      .event-time {
+        font-size: 11px;
+      }
+      .event.small {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .event.small .event-title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .current-time-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background-color: red;
+        z-index: 5000;
+      }
+      .header {
+        background-color: #000000;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        height: 40px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10000;
+      }
+      .date-circle {
+        width: 40px;
+        height: 40px;
+        background-color: #e81a1a;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        margin-right: 16px;
+      }
+      .day {
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="date-circle" id="dateCircle"></div>
+      <a href="#" class="day" id="dayName"></a>
+    </div>
+    <div class="calendar-container">
+      <div class="time-column" id="timeColumn"></div>
+      <div class="events-column" id="eventsColumn"></div>
+    </div>
+
+    <script>
+      const calendarDataJSON = `
+      {
+        "currentDay": {
+          "name": "Thursday",
+          "date": 12
+        },
+        "workingHours": {
+          "start": 11,
+          "end": 20
+        },
+        "events": [
+          {
+            "title": "Standup",
+            "startTime": "12:00",
+            "endTime": "12:15"
+          },
+          {
+            "title": "Big important event",
+            "startTime": "14:00",
+            "endTime": "15:00"
+          },
+          {
+            "title": "Smaller important event",
+            "startTime": "15:00",
+            "endTime": "15:45"
+          },
+          {
+            "title": "Slack off",
+            "startTime": "16:00",
+            "endTime": "16:15"
+          },
+          {
+            "title": "Some more stuff",
+            "startTime": "17:38",
+            "endTime": "17:50"
+          },
+          {
+            "title": "Things",
+            "startTime": "18:00",
+            "endTime": "18:25"
+          }
+        ]
+      }`;
+
+      const calendarData = JSON.parse(calendarDataJSON);
+
+      function createTimeSlots() {
+        const timeColumn = document.getElementById("timeColumn");
+        for (let i = calendarData.workingHours.start; i < calendarData.workingHours.end; i++) {
+          const timeSlot = document.createElement("div");
+          timeSlot.className = "time-slot";
+          timeSlot.innerHTML = `<span>${i.toString().padStart(2, '0')}:00</span>`;
+          timeColumn.appendChild(timeSlot);
+        }
+      }
+
+      function createEvents() {
+        const eventsColumn = document.getElementById("eventsColumn");
+        const totalHours = calendarData.workingHours.end - calendarData.workingHours.start;
+
+        calendarData.events.forEach((event) => {
+          const [startHour, startMinute] = event.startTime
+            .split(":")
+            .map(Number);
+          const [endHour, endMinute] = event.endTime.split(":").map(Number);
+
+          if (startHour < calendarData.workingHours.start || endHour > calendarData.workingHours.end)
+            return;
+
+          const eventElement = document.createElement("div");
+          eventElement.className = "event";
+
+          const startPercentage = ((startHour + startMinute / 60 - calendarData.workingHours.start) / totalHours) * 100;
+          const durationInHours = endHour - startHour + (endMinute - startMinute) / 60;
+          const durationInMinutes = Math.round(durationInHours * 60);
+          console.log(durationInHours)
+          // We're sometimes overshooting our percentage, I think because of decimals,
+          // so we're compensating here by reducing the height to 90%.
+          const heightPercentage = ((durationInHours / totalHours) * 100) * 0.90;
+
+          eventElement.style.top = `${startPercentage}%`;
+          eventElement.style.height = `${heightPercentage}%`;
+          eventElement.style.zIndex = 1440 - durationInMinutes;
+
+          const eventContent = `
+            <div class="event-title">${event.title}</div>
+            <div class="event-time">${event.startTime} - ${event.endTime}</div>
+          `;
+          eventElement.innerHTML = eventContent;
+
+          eventsColumn.appendChild(eventElement);
+
+          // Check if the event height is less than the displayable height
+          const titleHeight = eventElement.querySelector('.event-title').offsetHeight;
+          if (eventElement.offsetHeight < titleHeight * 2) {
+            eventElement.classList.add('small');
+          }
+        });
+      }
+
+      function updateCurrentTimeLine() {
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+
+        if (currentHour < calendarData.workingHours.start || currentHour > calendarData.workingHours.end) {
+          return;
+        }
+
+        const totalHours = calendarData.workingHours.end - calendarData.workingHours.start;
+        const currentTimePercentage = ((currentHour + currentMinute / 60 - calendarData.workingHours.start) / totalHours) * 100;
+
+        let currentTimeLine = document.getElementById("currentTimeLine");
+        if (!currentTimeLine) {
+            currentTimeLine = document.createElement("div");
+            currentTimeLine.id = "currentTimeLine";
+            currentTimeLine.className = "current-time-line";
+            document.getElementById("eventsColumn").appendChild(currentTimeLine);
+        }
+
+        currentTimeLine.style.top = `${currentTimePercentage}%`;
+      }
+
+      function updateHeader() {
+        document.getElementById('dateCircle').textContent = calendarData.currentDay.date;
+        document.getElementById('dayName').textContent = calendarData.currentDay.name;
+      }
+
+      createTimeSlots();
+      window.addEventListener("load", () => {
+        updateHeader();
+        createEvents();
+        updateCurrentTimeLine();
+        setInterval(updateCurrentTimeLine, 60000); // Update every minute
+      });
+    </script>
+  </body>
+</html>
