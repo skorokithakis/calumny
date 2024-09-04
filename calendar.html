@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Google Calendar Day View Clone</title>
+    <title>Calumny</title>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -92,7 +92,7 @@
       .date-circle {
         width: 40px;
         height: 40px;
-        background-color: #e81a1a;
+        background-color: #f00;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -119,65 +119,75 @@
     </div>
 
     <script>
-      const calendarDataJSON = `
-      {
-        "currentDay": {
-          "name": "Thursday",
-          "date": 12
-        },
-        "workingHours": {
-          "start": 11,
-          "end": 20
-        },
-        "events": [
-          {
-            "title": "Standup",
-            "startTime": "12:00",
-            "endTime": "12:15"
+      let calendarDataJSON = `{{calendarDataJSON}}`;
+      if (calendarDataJSON.includes("{{")) {
+        calendarDataJSON = `
+        {
+          "currentDay": {
+            "name": "Thursday",
+            "date": 12
           },
-          {
-            "title": "Big important event",
-            "startTime": "14:00",
-            "endTime": "15:00"
+          "workingHours": {
+            "start": 11,
+            "end": 20
           },
-          {
-            "title": "Smaller important event",
-            "startTime": "15:00",
-            "endTime": "15:45"
-          },
-          {
-            "title": "Slack off",
-            "startTime": "16:00",
-            "endTime": "16:15"
-          },
-          {
-            "title": "Some more stuff",
-            "startTime": "17:38",
-            "endTime": "17:50"
-          },
-          {
-            "title": "Things",
-            "startTime": "18:00",
-            "endTime": "18:25"
-          }
-        ]
-      }`;
+          "events": [
+            {
+              "title": "Standup",
+              "startTime": "12:00",
+              "endTime": "12:15"
+            },
+            {
+              "title": "Big important event",
+              "startTime": "14:00",
+              "endTime": "15:00"
+            },
+            {
+              "title": "Smaller important event",
+              "startTime": "15:00",
+              "endTime": "15:45"
+            },
+            {
+              "title": "Slack off",
+              "startTime": "16:00",
+              "endTime": "16:15"
+            },
+            {
+              "title": "Some more stuff",
+              "startTime": "17:38",
+              "endTime": "17:50"
+            },
+            {
+              "title": "Things",
+              "startTime": "18:00",
+              "endTime": "18:25"
+            }
+          ]
+        }`;
+      }
 
       const calendarData = JSON.parse(calendarDataJSON);
 
       function createTimeSlots() {
         const timeColumn = document.getElementById("timeColumn");
-        for (let i = calendarData.workingHours.start; i < calendarData.workingHours.end; i++) {
+        for (
+          let i = calendarData.workingHours.start;
+          i < calendarData.workingHours.end;
+          i++
+        ) {
           const timeSlot = document.createElement("div");
           timeSlot.className = "time-slot";
-          timeSlot.innerHTML = `<span>${i.toString().padStart(2, '0')}:00</span>`;
+          timeSlot.innerHTML = `<span>${i
+            .toString()
+            .padStart(2, "0")}:00</span>`;
           timeColumn.appendChild(timeSlot);
         }
       }
 
       function createEvents() {
         const eventsColumn = document.getElementById("eventsColumn");
-        const totalHours = calendarData.workingHours.end - calendarData.workingHours.start;
+        const totalHours =
+          calendarData.workingHours.end - calendarData.workingHours.start;
 
         calendarData.events.forEach((event) => {
           const [startHour, startMinute] = event.startTime
@@ -185,19 +195,26 @@
             .map(Number);
           const [endHour, endMinute] = event.endTime.split(":").map(Number);
 
-          if (startHour < calendarData.workingHours.start || endHour > calendarData.workingHours.end)
+          if (
+            startHour < calendarData.workingHours.start ||
+            endHour > calendarData.workingHours.end
+          )
             return;
 
           const eventElement = document.createElement("div");
           eventElement.className = "event";
 
-          const startPercentage = ((startHour + startMinute / 60 - calendarData.workingHours.start) / totalHours) * 100;
-          const durationInHours = endHour - startHour + (endMinute - startMinute) / 60;
+          const startPercentage =
+            ((startHour + startMinute / 60 - calendarData.workingHours.start) /
+              totalHours) *
+            100;
+          const durationInHours =
+            endHour - startHour + (endMinute - startMinute) / 60;
           const durationInMinutes = Math.round(durationInHours * 60);
-          console.log(durationInHours)
+          console.log(durationInHours);
           // We're sometimes overshooting our percentage, I think because of decimals,
           // so we're compensating here by reducing the height to 90%.
-          const heightPercentage = ((durationInHours / totalHours) * 100) * 0.90;
+          const heightPercentage = (durationInHours / totalHours) * 100 * 0.9;
 
           eventElement.style.top = `${startPercentage}%`;
           eventElement.style.height = `${heightPercentage}%`;
@@ -212,9 +229,10 @@
           eventsColumn.appendChild(eventElement);
 
           // Check if the event height is less than the displayable height
-          const titleHeight = eventElement.querySelector('.event-title').offsetHeight;
+          const titleHeight =
+            eventElement.querySelector(".event-title").offsetHeight;
           if (eventElement.offsetHeight < titleHeight * 2) {
-            eventElement.classList.add('small');
+            eventElement.classList.add("small");
           }
         });
       }
@@ -224,27 +242,38 @@
         const currentHour = now.getHours();
         const currentMinute = now.getMinutes();
 
-        if (currentHour < calendarData.workingHours.start || currentHour > calendarData.workingHours.end) {
+        if (
+          currentHour < calendarData.workingHours.start ||
+          currentHour > calendarData.workingHours.end
+        ) {
           return;
         }
 
-        const totalHours = calendarData.workingHours.end - calendarData.workingHours.start;
-        const currentTimePercentage = ((currentHour + currentMinute / 60 - calendarData.workingHours.start) / totalHours) * 100;
+        const totalHours =
+          calendarData.workingHours.end - calendarData.workingHours.start;
+        const currentTimePercentage =
+          ((currentHour +
+            currentMinute / 60 -
+            calendarData.workingHours.start) /
+            totalHours) *
+          100;
 
         let currentTimeLine = document.getElementById("currentTimeLine");
         if (!currentTimeLine) {
-            currentTimeLine = document.createElement("div");
-            currentTimeLine.id = "currentTimeLine";
-            currentTimeLine.className = "current-time-line";
-            document.getElementById("eventsColumn").appendChild(currentTimeLine);
+          currentTimeLine = document.createElement("div");
+          currentTimeLine.id = "currentTimeLine";
+          currentTimeLine.className = "current-time-line";
+          document.getElementById("eventsColumn").appendChild(currentTimeLine);
         }
 
         currentTimeLine.style.top = `${currentTimePercentage}%`;
       }
 
       function updateHeader() {
-        document.getElementById('dateCircle').textContent = calendarData.currentDay.date;
-        document.getElementById('dayName').textContent = calendarData.currentDay.name;
+        document.getElementById("dateCircle").textContent =
+          calendarData.currentDay.date;
+        document.getElementById("dayName").textContent =
+          calendarData.currentDay.name;
       }
 
       createTimeSlots();
