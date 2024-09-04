@@ -25,9 +25,10 @@ To then send the screenshot to your display, you can use whatever program you wa
 
 ## Usage
 
-To use Calumny, run `python calumny.py <outfile.png>`. If you have `uv` installed, you
-can run it as `./calumny.py <outfile.png>`, which will automatically create a virtual
-environment and install Calumny's dependencies.
+To use Calumny, run `python calumny.py <outfile.png>`. If you have
+[uv](https://github.com/astral-sh/uv) installed, you can run it as `./calumny.py
+<outfile.png>`, which will automatically create a virtual environment and install
+Calumny's dependencies.
 
 You can customize your working hours (so Calumny only shows from your starting to your
 ending times), as well as your display's resolution.
