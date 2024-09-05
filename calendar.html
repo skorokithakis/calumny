@@ -73,7 +73,7 @@
       }
       .current-time-line {
         position: absolute;
-        left: 50px; /* Start from the edge of the time column */
+        left: 0;
         right: 0;
         height: 1px;
         background-color: red;
@@ -274,7 +274,7 @@
           currentTimeLine = document.createElement("div");
           currentTimeLine.id = "currentTimeLine";
           currentTimeLine.className = "current-time-line";
-          document.querySelector('.calendar-container').appendChild(currentTimeLine);
+          document.querySelector('.events-column').appendChild(currentTimeLine);
         }
 
         currentTimeLine.style.top = `${currentTimePercentage}%`;
