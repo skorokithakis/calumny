@@ -82,11 +82,11 @@
 
       .red-circle {
         position: absolute;
-        width: 14px;
-        height: 14px;
+        width: 10px;
+        height: 10px;
         background-color: red;
         border-radius: 50%;
-        left: 36px; /* Position it slightly to the left of the vertical hours line */
+        left: 40px; /* Position it slightly to the left of the vertical hours line */
         top: -4px; /* Adjust for circle size */
       }
       .header {
@@ -287,7 +287,7 @@
           redCircle.className = 'red-circle';
           document.querySelector('.calendar-container').appendChild(redCircle);
         }
-        redCircle.style.top = `calc(${currentTimePercentage}% - 6px)`; // Adjust for circle size
+        redCircle.style.top = `calc(${currentTimePercentage}% - 4px)`; // Adjust for circle size
       }
 
       function updateHeader() {
