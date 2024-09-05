@@ -23,6 +23,8 @@
         padding-right: 8px;
         display: flex;
         flex-direction: column;
+        position: relative;
+        height: 100%;
       }
       .time-slot {
         flex: 1;
@@ -87,7 +89,7 @@
         background-color: red;
         border-radius: 50%;
         left: 40px; /* Position it slightly to the left of the vertical hours line */
-        top: -4px; /* Adjust for circle size */
+        top: -5px; /* Adjust for circle size */
       }
       .header {
         background-color: #000000;
@@ -284,7 +286,7 @@
           redCircle = document.createElement('div');
           redCircle.id = 'redCircle';
           redCircle.className = 'red-circle';
-          document.querySelector('.calendar-container').appendChild(redCircle);
+          document.querySelector('.time-column').appendChild(redCircle);
         }
         redCircle.style.top = `calc(${currentTimePercentage}% - 4px)`; // Adjust for circle size
       }
