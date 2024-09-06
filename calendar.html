@@ -226,7 +226,7 @@
           const durationInMinutes = Math.round(durationInHours * 60);
           // We're sometimes overshooting our percentage, I think because of decimals,
           // so we're compensating here by reducing the height to 90%.
-          const heightPercentage = (durationInHours / totalHours) * 100 * 0.90;
+          const heightPercentage = (durationInHours / totalHours) * 100 * 0.88;
 
           eventElement.style.top = `${startPercentage}%`;
           eventElement.style.height = `${heightPercentage}%`;
