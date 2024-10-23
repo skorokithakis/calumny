@@ -5,6 +5,8 @@
 #     "google-api-python-client",
 #     "google-auth-httplib2",
 #     "google-auth-oauthlib",
+#     "selenium",
+#     "webdriver_manager",
 # ]
 # ///
 import argparse
@@ -23,9 +25,54 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.service import Service as FirefoxService
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.firefox import GeckoDriverManager
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
+
+
+def capture(url: str, output_file: str, width: int, height: int):
+    options = Options()
+    for argument in [
+        "--headless=new",
+        "--no-sandbox",
+        "--disable-gpu",
+        "--hide-scrollbars",
+        "--disable-extensions",
+        "--disable-web-security",
+        "--allow-running-insecure-content",
+        "--force-device-scale-factor=1",
+        "--high-dpi-support=1",
+        "--proxy-server='direct://'",
+        "--proxy-bypass-list=*",
+    ]:
+        options.add_argument(argument)
+
+    driver = webdriver.Chrome(
+        service=ChromeService(ChromeDriverManager().install()),
+        options=options,
+    )
+    window_size = driver.execute_script(
+        """
+        return [window.outerWidth - window.innerWidth + arguments[0],
+          window.outerHeight - window.innerHeight + arguments[1]];
+        """,
+        width,
+        height,
+    )
+    driver.set_window_size(*window_size)
+
+    driver.get(url)
+
+    filename = output_file
+    driver.save_screenshot(filename)
+    driver.close()
 
 
 def get_todays_events(target_date: datetime.datetime):
@@ -189,22 +236,8 @@ def main():
     print("Server is ready. Proceeding with gowitness...")
 
     try:
-        subprocess.run(
-            [
-                "gowitness",
-                "single",
-                "-X",
-                str(args.width),
-                "-Y",
-                str(args.height),
-                "--disable-db",
-                "-P",
-                ".",
-                "-o",
-                args.output,
-                "http://localhost:33597/",
-            ],
-            check=True,
+        capture(
+            "http://localhost:33597/calendar.html", args.output, args.width, args.height
         )
     except subprocess.CalledProcessError as e:
         print(f"Error running gowitness: {e}")

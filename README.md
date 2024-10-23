@@ -17,8 +17,8 @@ a file with credentials, which you put in the same directory as Calumny, and whi
 will use to fetch the events.
 
 When you run `calumny.py`, Calumny will fetch the events, put them into `calendar.html`,
-write a temporary file with the resulting output, and then use
-[gowitness](https://github.com/sensepost/gowitness) to take a screenshot of the page.
+write a temporary file with the resulting output, and then use Selenium with Chrome to
+take a screenshot of the page.
 
 To then send the screenshot to your display, you can use whatever program you want.
 
