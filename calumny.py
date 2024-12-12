@@ -54,7 +54,7 @@ class Event(BaseModel):
 class Calendar(BaseModel):
     events: list[Event] = []
     currentDay: dict[str, Any]
-    workingHours: dict[str, Any]
+    workingHours: dict[str, int]
 
     class Config:
         json_encoders = {time: lambda t: t.strftime("%H:%M")}
