@@ -7,24 +7,26 @@
 #     "google-auth-oauthlib",
 #     "selenium",
 #     "webdriver_manager",
+#     "pydantic",
 # ]
 # ///
 import argparse
 import datetime
-import json
 import os.path
 import subprocess
-import sys
 import tempfile
 import threading
+from datetime import time
 from http.server import HTTPServer
 from http.server import SimpleHTTPRequestHandler
 from pprint import pprint
+from typing import Any
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from pydantic import BaseModel
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -33,8 +35,29 @@ from selenium.webdriver.firefox.service import Service as FirefoxService
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 
+
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
+
+
+class Event(BaseModel):
+    title: str
+    startTime: time
+    endTime: time
+    status: str | None = None
+    optional: bool = False
+
+    class Config:
+        json_encoders = {time: lambda t: t.strftime("%H:%M")}
+
+
+class Calendar(BaseModel):
+    events: list[Event] = []
+    currentDay: dict[str, Any]
+    workingHours: dict[str, Any]
+
+    class Config:
+        json_encoders = {time: lambda t: t.strftime("%H:%M")}
 
 
 def capture(url: str, output_file: str, width: int, height: int):
@@ -75,7 +98,7 @@ def capture(url: str, output_file: str, width: int, height: int):
     driver.close()
 
 
-def get_todays_events(target_date: datetime.datetime):
+def get_todays_events(target_date: datetime.datetime) -> list[Event]:
     creds = None
     if os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", SCOPES)
@@ -128,12 +151,25 @@ def get_todays_events(target_date: datetime.datetime):
             if start_time == end_time:
                 continue
 
+            if my_attendance := [
+                x for x in event.get("attendees", []) if x.get("self")
+            ]:
+                attendance = my_attendance[0]
+            else:
+                attendance = {}
+
+            # Convert HH:MM strings to time objects
+            start_time_obj = datetime.datetime.strptime(start_time, "%H:%M").time()
+            end_time_obj = datetime.datetime.strptime(end_time, "%H:%M").time()
+
             output.append(
-                {
-                    "title": event["summary"],
-                    "startTime": start_time,
-                    "endTime": end_time,
-                }
+                Event(
+                    title=event["summary"],
+                    startTime=start_time_obj,
+                    endTime=end_time_obj,
+                    status=attendance.get("responseStatus"),
+                    optional=event.get("optional", False),
+                )
             )
 
         return output
@@ -143,13 +179,13 @@ def get_todays_events(target_date: datetime.datetime):
         return []
 
 
-def get_calendar_data(day_start, day_end):
+def get_calendar_data(day_start, day_end) -> Calendar:
     today = datetime.datetime.now()
-    return {
-        "currentDay": {"name": today.strftime("%A"), "date": today.day},
-        "workingHours": {"start": day_start, "end": day_end},
-        "events": get_todays_events(today),
-    }
+    return Calendar(
+        currentDay={"name": today.strftime("%A"), "date": today.day},
+        workingHours={"start": day_start, "end": day_end},
+        events=get_todays_events(today),
+    )
 
 
 def parse_arguments():
@@ -204,11 +240,12 @@ def main():
     with open("calendar.html", "r") as file:
         calendar_html = file.read()
 
-    calendar_data = get_calendar_data(args.day_start, args.day_end)
-    pprint(calendar_data)
-    calendar_data_json = json.dumps(calendar_data)
+    calendar = get_calendar_data(args.day_start, args.day_end)
+    pprint(calendar)
 
-    updated_html = calendar_html.replace("{{calendarDataJSON}}", calendar_data_json)
+    updated_html = calendar_html.replace(
+        "{{calendarDataJSON}}", calendar.model_dump_json()
+    )
 
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".html", delete=False
@@ -240,7 +277,7 @@ def main():
             "http://localhost:33597/calendar.html", args.output, args.width, args.height
         )
     except subprocess.CalledProcessError as e:
-        print(f"Error running gowitness: {e}")
+        print(f"Error capturing screenshot: {e}")
     finally:
         os.unlink(temp_file_name)
 
