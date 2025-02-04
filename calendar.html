@@ -46,10 +46,9 @@
       }
       .event {
         position: absolute;
-        left: 1px;
-        right: 1px;
         padding: 3px;
         border-radius: 4px;
+        box-sizing: border-box;
         font-size: 14px;
         overflow: hidden;
         background-color: #fff;
@@ -218,6 +217,69 @@
 
       const calendarData = JSON.parse(calendarDataJSON);
 
+      function resolveOverlaps(events, workingStart) {
+        // First, add numeric values for easier math.
+        events.forEach(evt => {
+          const [sHour, sMin] = evt.startTime.split(":").map(Number);
+          const [eHour, eMin] = evt.endTime.split(":").map(Number);
+          evt.startMinutes = (sHour - workingStart) * 60 + sMin;
+          evt.endMinutes = (eHour - workingStart) * 60 + eMin;
+        });
+
+        // Sort by start time.
+        const sorted = events.slice().sort((a, b) => a.startMinutes - b.startMinutes);
+        const groups = []; // each group is an array of events that overlap
+        sorted.forEach(evt => {
+          let placed = false;
+          // Try to put evt into an existing group if it overlaps with its members.
+          for (let group of groups) {
+            // If evt starts after or equals the group's latest end, they are separate.
+            let groupEnd = Math.max(...group.map(e => e.endMinutes));
+            if (evt.startMinutes >= groupEnd) continue;
+            // Otherwise, add to group.
+            group.push(evt);
+            placed = true;
+            break;
+          }
+          // If not placed, start a new group.
+          if (!placed) {
+            groups.push([evt]);
+          }
+        });
+
+        // For each group, assign columns by a greedy algorithm.
+        groups.forEach(group => {
+          // sort group events by start time (again for safety)
+          group.sort((a, b) => a.startMinutes - b.startMinutes);
+          let columns = [];
+          group.forEach(evt => {
+            // Try to put evt in an existing column.
+            let placed = false;
+            for (let i = 0; i < columns.length; i++) {
+              // The column is a list of events; check last event in column.
+              const lastEvent = columns[i][columns[i].length - 1];
+              if (evt.startMinutes >= lastEvent.endMinutes) {
+                columns[i].push(evt);
+                evt.col = i;
+                placed = true;
+                break;
+              }
+            }
+            if (!placed) {
+              // Create a new column.
+              columns.push([evt]);
+              evt.col = columns.length - 1;
+            }
+          });
+          // Now assign the total number of columns to all events in this group.
+          group.forEach(evt => {
+            evt.cols = columns.length;
+          });
+        });
+
+        return events;
+      }
+
       function createTimeSlots() {
         const timeColumn = document.getElementById("timeColumn");
         for (
@@ -239,47 +301,45 @@
         const totalHours =
           calendarData.workingHours.end - calendarData.workingHours.start;
 
-        calendarData.events.forEach((event) => {
-          const [startHour, startMinute] = event.startTime
-            .split(":")
-            .map(Number);
-          const [endHour, endMinute] = event.endTime.split(":").map(Number);
+        // Compute overlapping columns for events
+        const eventsWithGrid = resolveOverlaps(calendarData.events.filter(event => {
+          // Only process events that are inside working hours.
+          const [sHour] = event.startTime.split(":").map(Number);
+          const [eHour] = event.endTime.split(":").map(Number);
+          return (sHour >= calendarData.workingHours.start && eHour <= calendarData.workingHours.end);
+        }), calendarData.workingHours.start);
 
-          if (
-            startHour < calendarData.workingHours.start ||
-            endHour > calendarData.workingHours.end
-          )
-            return;
-
+        eventsWithGrid.forEach(event => {
           const eventElement = document.createElement("div");
           eventElement.className = `event${event.status === "declined" ? " declined" : ""}`;
 
+          // Calculate vertical positioning
           const startPercentage =
-            ((startHour + startMinute / 60 - calendarData.workingHours.start) /
+            ((event.startMinutes / 60) /
               totalHours) *
             100;
-          const durationInHours =
-            endHour - startHour + (endMinute - startMinute) / 60;
-          const durationInMinutes = Math.round(durationInHours * 60);
-          // We're sometimes overshooting our percentage, I think because of decimals,
-          // so we're compensating here by reducing the height to 90%.
+          const durationInHours = (event.endMinutes - event.startMinutes) / 60;
           const heightPercentage = (durationInHours / totalHours) * 100 * 0.88;
 
           eventElement.style.top = `${startPercentage}%`;
           eventElement.style.height = `${heightPercentage}%`;
-          eventElement.style.zIndex = 1440 - durationInMinutes;
+          eventElement.style.zIndex = 1440 - Math.round(durationInHours * 60);
+
+          // Calculate horizontal grid based on overlap
+          const col = event.col;
+          const totalCols = event.cols;
+          eventElement.style.left = `${(col / totalCols) * 100}%`;
+          eventElement.style.width = `${100 / totalCols}%`;
 
           const eventContent = `
             <div class="event-title">${event.title}</div>
             <div class="event-time">${event.startTime} - ${event.endTime}</div>
           `;
           eventElement.innerHTML = eventContent;
-
           eventsColumn.appendChild(eventElement);
 
-          // Check if the event height is less than the displayable height
-          const titleHeight =
-            eventElement.querySelector(".event-title").offsetHeight;
+          // Check for small height
+          const titleHeight = eventElement.querySelector(".event-title").offsetHeight;
           if (eventElement.offsetHeight < titleHeight * 2) {
             eventElement.classList.add("small");
           }
