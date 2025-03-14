@@ -164,7 +164,7 @@ def get_todays_events(target_date: datetime.datetime) -> list[Event]:
 
             output.append(
                 Event(
-                    title=event["summary"],
+                    title=event.get("summary", "(No title)"),
                     startTime=start_time_obj,
                     endTime=end_time_obj,
                     status=attendance.get("responseStatus"),
